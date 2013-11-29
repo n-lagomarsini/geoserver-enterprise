@@ -216,6 +216,10 @@
     <bean id="jiffle" class="org.geoserver.wps.raster.algebra.JiffleProcess">
       <constructor-arg index="0" ref="catalog"/>
     </bean>
+    
+    <!-- TODO: remove this thing -->    
+    <bean id="jiffleScript" class="org.geoserver.wps.raster.algebra.JiffleScriptProcess"/>
+    
     <!-- 
        ==================================================================
        Deal with temporary files
