@@ -538,6 +538,14 @@
      </exclusion>
     </exclusions>
    </dependency>
+
+    <!-- JAI-Ext-->
+   <dependency>
+     <groupId>it.geosolutions.jaiext.bandmerge</groupId>
+     <artifactId>jt-bandmerge</artifactId>
+     <version>${jaiext.version}</version>
+   </dependency>
+
    <dependency>
     <groupId>org.geowebcache</groupId>
     <artifactId>gwc-georss</artifactId>
@@ -1558,6 +1566,7 @@
   <build.hudsonId>-1</build.hudsonId>
   <fork.javac>true</fork.javac>
   <javac.maxHeapSize>256m</javac.maxHeapSize>
+  <jaiext.version>1.0-SNAPSHOT</jaiext.version>
  </properties>
 
  <profiles>

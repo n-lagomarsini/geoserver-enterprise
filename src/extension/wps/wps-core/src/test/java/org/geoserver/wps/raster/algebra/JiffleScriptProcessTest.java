@@ -1,9 +1,13 @@
 package org.geoserver.wps.raster.algebra;
 
 import java.awt.RenderingHints;
+import java.awt.image.ColorModel;
+import java.awt.image.ComponentColorModel;
 import java.awt.image.Raster;
 import java.awt.image.RenderedImage;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -30,7 +34,17 @@ import com.sun.media.jai.util.SunTileCache;
  */
 public class JiffleScriptProcessTest extends WPSTestSupport {
 
+    private static final int MORE_THAN_ZERO_BAND_0 = 1;
+
+    private static final int LESS_THAN_ZERO_BAND_0 = 0;
+
+    private static final int MORE_THAN_ZERO_BAND_1 = 128;
+
+    private static final int[] FINAL_VALUES = new int[] { MORE_THAN_ZERO_BAND_0 };
+
     private static final String JIFFLE_SCRIPT_PATH = "./src/test/resources/script_jiffle";
+
+    private static final String JIFFLE_SCRIPT_2_PATH = "./src/test/resources/script_jiffle_2";
 
     private static final String WRONG_BAND_MSG = "Band Index is not correct";
 
@@ -47,6 +61,8 @@ public class JiffleScriptProcessTest extends WPSTestSupport {
     private static final int FINAL_NUM_BANDS = 1;
 
     private final static JiffleScriptProcess process = new JiffleScriptProcess();
+    
+    private final static JiffleScriptListProcess process2 = new JiffleScriptListProcess();
 
     private static GridCoverage2D testCoverage1;
 
@@ -132,7 +148,7 @@ public class JiffleScriptProcessTest extends WPSTestSupport {
 
             PlanarImage.wrapRenderedImage(finalImage).getTiles();
 
-            checkExecution(finalImage, testCoverage1);
+            checkExecution(finalImage, FINAL_VALUES, testCoverage1);
 
             finalCoverage.dispose(true);
             if (finalImage instanceof RenderedOp) {
@@ -153,7 +169,6 @@ public class JiffleScriptProcessTest extends WPSTestSupport {
         if (testCoverage1 != null && testCoverage2 != null) {
             // Script selection
             String script = FileUtils.readFileToString(new File(JIFFLE_SCRIPT_PATH));
-
             // Combination of the bands of the 2 images
             RenderedImage img1 = testCoverage1.getRenderedImage();
             RenderedImage img2 = testCoverage2.getRenderedImage();
@@ -173,7 +188,7 @@ public class JiffleScriptProcessTest extends WPSTestSupport {
 
             PlanarImage.wrapRenderedImage(finalImage).getTiles();
 
-            checkExecution(finalImage, testCoverage1, testCoverage2);
+            checkExecution(finalImage, FINAL_VALUES, testCoverage1, testCoverage2);
 
             finalCoverage.dispose(true);
             if (finalImage instanceof RenderedOp) {
@@ -203,7 +218,7 @@ public class JiffleScriptProcessTest extends WPSTestSupport {
 
             PlanarImage.wrapRenderedImage(finalImage).getTiles();
 
-            checkExecution(finalImage, testCoverage3);
+            checkExecution(finalImage, FINAL_VALUES, testCoverage3);
 
             finalCoverage.dispose(true);
             if (finalImage instanceof RenderedOp) {
@@ -223,7 +238,6 @@ public class JiffleScriptProcessTest extends WPSTestSupport {
         if (testCoverage3 != null) {
             // Script selection
             String script = FileUtils.readFileToString(new File(JIFFLE_SCRIPT_PATH));
-
             GridCoverage2D finalCoverage = null;
             try {
                 // Process calculation
@@ -245,15 +259,117 @@ public class JiffleScriptProcessTest extends WPSTestSupport {
         }
     }
 
+    // Test on a multibanded image
+    public void testOnAllBands() throws Exception {
+
+        if (testCoverage3 != null) {
+            // Script selection
+            String script = FileUtils.readFileToString(new File(JIFFLE_SCRIPT_PATH));
+            // Process calculation
+            List<String> scripts = new ArrayList<String>(1);
+            scripts.add(script);
+            GridCoverage2D finalCoverage = process2.execute(testCoverage3, scripts);
+            // Check the result
+            assertNotNull(finalCoverage);
+
+            RenderedImage finalImage = finalCoverage.getRenderedImage();
+            // Check on the number of bands
+            int numBandsOut = finalImage.getSampleModel().getNumBands();
+
+            int numBandsIn = testCoverage3.getRenderedImage().getSampleModel().getNumBands();
+
+            ColorModel cm = testCoverage3.getRenderedImage().getColorModel();
+
+            if (cm.hasAlpha() && !cm.isAlphaPremultiplied()) {
+                numBandsIn--;
+            }
+
+            assertEquals(numBandsIn, numBandsOut);
+
+            PlanarImage.wrapRenderedImage(finalImage).getTiles();
+
+            int[] values = new int[] { MORE_THAN_ZERO_BAND_0, MORE_THAN_ZERO_BAND_0,
+                    MORE_THAN_ZERO_BAND_0 };
+
+            checkExecution(finalImage, values, testCoverage3);
+
+            finalCoverage.dispose(true);
+            if (finalImage instanceof RenderedOp) {
+                ((RenderedOp) finalImage).dispose();
+            }
+        } else {
+            LOGGER.log(
+                    Level.WARNING,
+                    "\nTest5: file "
+                            + IMAGE_NAME_3
+                            + " not found in geoserver-enterprise/src/extension/wps/wps-core/src/test/java/org/geoserver/wps/raster/algebra");
+        }
+    }
+
+    // Test on a multibanded image
+    public void testOnAllBandsMultiScripts() throws Exception {
+
+        if (testCoverage3 != null) {
+            // Script1 selection
+            String script = FileUtils.readFileToString(new File(JIFFLE_SCRIPT_PATH));
+            // Script2 selection
+            String script2 = FileUtils.readFileToString(new File(JIFFLE_SCRIPT_2_PATH));
+            // Process calculation
+            List<String> scripts = new ArrayList<String>(1);
+            scripts.add(script);
+            scripts.add(script2);
+            scripts.add(script2);
+            GridCoverage2D finalCoverage = process2.execute(testCoverage3, scripts);
+            // Check the result
+            assertNotNull(finalCoverage);
+
+            RenderedImage finalImage = finalCoverage.getRenderedImage();
+            // Check on the number of bands
+            int numBandsOut = finalImage.getSampleModel().getNumBands();
+
+            int numBandsIn = testCoverage3.getRenderedImage().getSampleModel().getNumBands();
+
+            ColorModel cm = testCoverage3.getRenderedImage().getColorModel();
+
+            if (cm != null && cm instanceof ComponentColorModel && cm.hasAlpha() && !cm.isAlphaPremultiplied()) {
+                numBandsIn--;
+            }
+
+            assertEquals(numBandsIn, numBandsOut);
+
+            PlanarImage.wrapRenderedImage(finalImage).getTiles();
+
+            int[] values = new int[] { MORE_THAN_ZERO_BAND_0, MORE_THAN_ZERO_BAND_1,
+                    MORE_THAN_ZERO_BAND_1 };
+
+            checkExecution(finalImage, values, testCoverage3);
+
+            finalCoverage.dispose(true);
+            if (finalImage instanceof RenderedOp) {
+                ((RenderedOp) finalImage).dispose();
+            }
+        } else {
+            LOGGER.log(
+                    Level.WARNING,
+                    "\nTest6: file "
+                            + IMAGE_NAME_3
+                            + " not found in geoserver-enterprise/src/extension/wps/wps-core/src/test/java/org/geoserver/wps/raster/algebra");
+        }
+    }
+
     /**
      * Private method for ensuring the validity of the output image.
      * 
      * @param outputImage RenderedImage extracted from the output coverage
      * @param inputCoverages Input Coverages used.
+     * @param values
      */
-    private void checkExecution(RenderedImage outputImage, GridCoverage2D... inputCoverages) {
+    private void checkExecution(RenderedImage outputImage, int[] values,
+            GridCoverage2D... inputCoverages) {
 
         RenderedImage inputImage = inputCoverages[0].getRenderedImage();
+
+        int numBands = outputImage.getSampleModel().getNumBands();
 
         int minTileX = outputImage.getMinTileX();
         int minTileY = outputImage.getMinTileY();
@@ -271,28 +387,35 @@ public class JiffleScriptProcessTest extends WPSTestSupport {
         int inputValue;
         int outputValue;
         // Cycle on each tile
-        for (int xTile = minTileX; xTile < maxTileX; xTile++) {
-            for (int yTile = minTileY; yTile < maxTileY; yTile++) {
+        int valueOver0;
 
-                inputTile = inputImage.getTile(xTile, yTile);
-                outputTile = outputImage.getTile(xTile, yTile);
+        for (int b = 0; b < numBands; b++) {
 
-                minX = inputTile.getMinX();
-                minY = inputTile.getMinY();
+            valueOver0 = values[b];
 
-                maxX = inputTile.getWidth() + minX;
-                maxY = inputTile.getHeight() + minY;
-                // Cycle on the x axis
-                for (int x = minX; x < maxX; x++) {
-                    // Cycle on the y axis
-                    for (int y = minY; y < maxY; y++) {
-                        inputValue = inputTile.getSample(x, y, 0);
-                        outputValue = outputTile.getSample(x, y, 0);
-                        // Check if the script operation is performed correctly
-                        if (inputValue > 0) {
-                            assertEquals(outputValue, 1);
-                        } else {
-                            assertEquals(outputValue, 0);
+            for (int xTile = minTileX; xTile < maxTileX; xTile++) {
+                for (int yTile = minTileY; yTile < maxTileY; yTile++) {
+
+                    inputTile = inputImage.getTile(xTile, yTile);
+                    outputTile = outputImage.getTile(xTile, yTile);
+
+                    minX = inputTile.getMinX();
+                    minY = inputTile.getMinY();
+
+                    maxX = inputTile.getWidth() + minX;
+                    maxY = inputTile.getHeight() + minY;
+                    // Cycle on the x axis
+                    for (int x = minX; x < maxX; x++) {
+                        // Cycle on the y axis
+                        for (int y = minY; y < maxY; y++) {
+                            inputValue = inputTile.getSample(x, y, b);
+                            outputValue = outputTile.getSample(x, y, b);
+                            // Check if the script operation is performed correctly
+                            if (inputValue > 0) {
+                                assertEquals(outputValue, valueOver0);
+                            } else {
+                                assertEquals(outputValue, LESS_THAN_ZERO_BAND_0);
+                            }
                         }
                     }
                 }
